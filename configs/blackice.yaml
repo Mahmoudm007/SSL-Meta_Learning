@@ -1,0 +1,6 @@
+blackice:
+  class_name: "5 Black Ice"
+  default_dir: "Black-ice"
+  default_mode: adapt_existing
+  shot_counts: [1, 5, 10, 20, 40]
+  caution: "Image-only black-ice classification is preliminary without auxiliary weather, pavement-temperature, friction, and glare context."

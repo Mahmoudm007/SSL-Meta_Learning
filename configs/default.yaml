@@ -1,0 +1,15 @@
+project: winter_rsc_ssl_meta_learning
+default_paths:
+  warmup_dir: "Warm-up Dataset"
+  data_dir: "Dataset_classes/1 Defined"
+  output_dir: "Output"
+defaults:
+  support_per_class: 60
+  query_per_class: 60
+  image_size: 512
+  batch_size: 32
+  seed: 42
+  augmentation_strength: medium
+  skip_ssl_if_checkpoint_exists: true
+  force_rerun: false
+objective: "few-shot-aware and rare-class-aware winter RSC classification"

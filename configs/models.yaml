@@ -1,0 +1,18 @@
+models:
+  convnext:
+    default_name: convnext_base_in22k
+    allowed_names:
+      - convnext_tiny
+      - convnext_small
+      - convnext_base
+      - convnext_base_in22k
+      - convnext_large
+    gradcam: final_convolutional_feature_layer
+  dino:
+    default_name: vit_base_patch14_dinov2.lvd142m
+    fallback_name: vit_base_patch16_224
+    visualization: attention_or_input_gradient_saliency_when_attention_weights_are_unavailable
+projection_head:
+  projection_dim: 128
+classifier:
+  classes: 5

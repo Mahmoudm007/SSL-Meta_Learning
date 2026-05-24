@@ -1,0 +1,1 @@
+"""Research figure generation utilities."""

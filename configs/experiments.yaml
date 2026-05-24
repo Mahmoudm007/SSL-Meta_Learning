@@ -1,0 +1,22 @@
+experiments:
+  - key: SSL_Prototypical
+    label: "E1: SSL + Prototypical Networks"
+  - key: SSL_Hard_Prototypical
+    label: "E2: SSL + Hard Prototypical Episodes"
+  - key: SSL_ClassBalanced_FineTune
+    label: "E3: SSL + Class-Balanced Supervised Fine-Tuning"
+  - key: SSL_MAML_ANIL
+    label: "E4: SSL + MAML / ANIL"
+  - key: SSL_MetricLearning
+    label: "E5: SSL + Supervised Contrastive / Metric Learning"
+  - key: SSL_Hybrid_FineTune_Episodic
+    label: "E6: SSL + Hybrid Fine-Tune + Episodic Meta-Learning"
+  - key: SSL_Simulated_FutureClass
+    label: "E7: Simulated Future-Class Few-Shot Adaptation"
+recommended_method: SSL_Hybrid_FineTune_Episodic
+hard_class_pairs:
+  - ["3 One Track - Partly", "1 Centre - Partly"]
+  - ["3 One Track - Partly", "2 Two Track - Partly"]
+  - ["3 One Track - Partly", "4 Fully"]
+  - ["1 Centre - Partly", "2 Two Track - Partly"]
+  - ["2 Two Track - Partly", "4 Fully"]
