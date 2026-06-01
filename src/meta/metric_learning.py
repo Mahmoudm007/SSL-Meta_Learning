@@ -37,7 +37,7 @@ def train_metric_learning(
     for epoch in range(1, epochs + 1):
         start = time.time()
         losses = []
-        for images, labels, _, _ in tqdm(loader, desc=f"metric epoch {epoch}/{epochs}", leave=False):
+        for images, labels, _, _ in tqdm(loader, desc=f"metric epoch {epoch}/{epochs}", leave=False, ascii=True):
             images = images.to(device, non_blocking=True)
             labels = labels.to(device, non_blocking=True)
             optimizer.zero_grad(set_to_none=True)

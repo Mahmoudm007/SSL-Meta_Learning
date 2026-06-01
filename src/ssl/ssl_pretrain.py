@@ -43,7 +43,7 @@ def train_ssl_encoder(model: torch.nn.Module, warmup_dir: str, output_root: str 
         feature_norms = []
         alignments = []
         uniforms = []
-        progress = tqdm(loader, desc=f"SSL epoch {epoch}/{epochs}", leave=False)
+        progress = tqdm(loader, desc=f"SSL epoch {epoch}/{epochs}", leave=False, ascii=True)
         for view_a, view_b, _ in progress:
             view_a = view_a.to(device, non_blocking=True)
             view_b = view_b.to(device, non_blocking=True)

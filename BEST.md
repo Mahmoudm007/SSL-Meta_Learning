@@ -4,7 +4,7 @@ These are the five most promising settings for the current winter RSC project. T
 
 The commands assume the updated project defaults:
 
-- ConvNeXt default: `convnext_base_in22k`
+- ConvNeXt default: `convnext_base.fb_in22k`
 - image size: `512`
 - batch size: `32`
 - support/query per class: `60/60`
@@ -20,7 +20,7 @@ This is the strongest recommended current-task run because it combines every use
 python run_ssl_meta_rsc.py \
   --experiment SSL_Hybrid_FineTune_Episodic \
   --models convnext dino \
-  --convnext_name convnext_base_in22k \
+  --convnext_name convnext_base.fb_in22k \
   --loss weighted_ce \
   --sampler balanced \
   --prototype_distance euclidean \
@@ -57,7 +57,7 @@ This setting is designed to improve feature geometry for visually similar RSC cl
 python run_ssl_meta_rsc.py \
   --experiment SSL_MetricLearning \
   --models convnext dino \
-  --convnext_name convnext_base_in22k \
+  --convnext_name convnext_base.fb_in22k \
   --metric_loss supcon \
   --hard_negative_mining true \
   --loss weighted_ce \
@@ -91,7 +91,7 @@ This is the strongest supervised-only baseline for the rare One Track class. It 
 python run_ssl_meta_rsc.py \
   --experiment SSL_ClassBalanced_FineTune \
   --models convnext dino \
-  --convnext_name convnext_base_in22k \
+  --convnext_name convnext_base.fb_in22k \
   --loss focal \
   --sampler balanced \
   --epochs_ssl 20 \
@@ -122,7 +122,7 @@ This setting focuses the episodic sampler on visually confusing class relationsh
 python run_ssl_meta_rsc.py \
   --experiment SSL_Hard_Prototypical \
   --models convnext dino \
-  --convnext_name convnext_base_in22k \
+  --convnext_name convnext_base.fb_in22k \
   --prototype_distance euclidean \
   --support_per_class 60 \
   --query_per_class 60 \
@@ -156,7 +156,7 @@ This is the most stable optimization-based meta-learning setting for large ConvN
 python run_ssl_meta_rsc.py \
   --experiment SSL_MAML_ANIL \
   --models convnext dino \
-  --convnext_name convnext_base_in22k \
+  --convnext_name convnext_base.fb_in22k \
   --meta_algorithm anil \
   --adapt_scope head \
   --inner_steps 5 \
@@ -193,7 +193,7 @@ If future-class adaptation is the main priority, run this in addition to the top
 python run_ssl_meta_rsc.py \
   --experiment SSL_Simulated_FutureClass \
   --models convnext dino \
-  --convnext_name convnext_base_in22k \
+  --convnext_name convnext_base.fb_in22k \
   --pseudo_novel_class "3 One Track - Partly" \
   --fewshot_values 1 5 10 20 40 60 \
   --prototype_distance euclidean \

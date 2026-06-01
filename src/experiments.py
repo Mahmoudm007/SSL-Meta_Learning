@@ -20,7 +20,7 @@ from src.meta.prototypical import install_prototype_classifier, train_prototypic
 from src.models.backbones import build_model
 from src.ssl.ssl_pretrain import train_ssl_encoder
 from src.supervised.finetune import train_supervised_classifier
-from src.utils.checkpointing import load_checkpoint, save_checkpoint
+from src.utils.checkpointing import load_checkpoint, load_checkpoint_metadata, save_checkpoint
 from src.utils.config import namespace_to_dict
 from src.utils.io import create_experiment_tree, initialize_epoch_csvs, save_run_config, write_dataframe
 from src.visualization.plots import save_augmentation_placeholders, save_dataset_figures
@@ -77,14 +77,27 @@ def run_single_experiment(
         result = train_metric_learning(model, train_dataset, val_dataset, class_mapping, output_root, args, device, run_logger)
         eval_result = result.get("classifier_result")
     elif experiment == "SSL_Hybrid_FineTune_Episodic":
-        eval_result = train_supervised_classifier(model, train_dataset, val_dataset, class_mapping, output_root, args, device, run_logger, phase_name="hybrid_supervised")
-        save_checkpoint(Path(output_root) / "checkpoints" / "supervised_finetuned.pt", model, phase="hybrid_supervised")
+        supervised_checkpoint = Path(output_root) / "checkpoints" / "supervised_finetuned.pt"
+        supervised_candidates = [supervised_checkpoint]
+        supervised_final_checkpoint = Path(output_root) / "checkpoints" / "final_model.pt"
+        if _checkpoint_phase_matches(supervised_final_checkpoint, {"hybrid_supervised"}):
+            supervised_candidates.append(supervised_final_checkpoint)
+        if _load_existing_phase_checkpoint(model, supervised_candidates, device, run_logger, args, "hybrid supervised fine-tuning"):
+            eval_result = None
+        else:
+            eval_result = train_supervised_classifier(model, train_dataset, val_dataset, class_mapping, output_root, args, device, run_logger, phase_name="hybrid_supervised")
+            save_checkpoint(supervised_checkpoint, model, phase="hybrid_supervised", epochs=args.epochs_finetune)
         _copy_metric_if_exists(output_root, "supervised_epoch_metrics.csv", "after_supervised_finetune.csv")
-        train_prototypical_network(model, train_dataset, val_dataset, class_mapping, output_root, args, device, run_logger, hard_probability=0.0, phase_name="episodic_balanced")
-        save_checkpoint(Path(output_root) / "checkpoints" / "episodic_balanced.pt", model, phase="episodic_balanced")
+        balanced_checkpoint = Path(output_root) / "checkpoints" / "episodic_balanced.pt"
+        if not _load_existing_phase_checkpoint(model, [balanced_checkpoint], device, run_logger, args, "balanced episodic training", required_epochs=args.epochs_meta):
+            train_prototypical_network(model, train_dataset, val_dataset, class_mapping, output_root, args, device, run_logger, hard_probability=0.0, phase_name="episodic_balanced")
         _copy_metric_if_exists(output_root, "meta_epoch_metrics.csv", "after_balanced_episodic.csv")
-        train_hard_prototypical_network(model, train_dataset, val_dataset, class_mapping, output_root, args, device, run_logger)
-        save_checkpoint(Path(output_root) / "checkpoints" / "episodic_hard_final.pt", model, phase="episodic_hard_final")
+        hard_final_checkpoint = Path(output_root) / "checkpoints" / "episodic_hard_final.pt"
+        hard_progress_checkpoint = Path(output_root) / "checkpoints" / "hard_prototypical.pt"
+        if not _load_existing_phase_checkpoint(model, [hard_final_checkpoint], device, run_logger, args, "hard episodic training"):
+            train_hard_prototypical_network(model, train_dataset, val_dataset, class_mapping, output_root, args, device, run_logger)
+            _load_existing_phase_checkpoint(model, [hard_progress_checkpoint], device, run_logger, args, "hard episodic final state")
+            save_checkpoint(hard_final_checkpoint, model, phase="episodic_hard_final", epochs=args.epochs_meta)
         install_prototype_classifier(model, train_eval_dataset, class_mapping, output_root, args, device)
         _copy_metric_if_exists(output_root, "meta_epoch_metrics.csv", "after_hard_episodic.csv")
     elif experiment == "SSL_Simulated_FutureClass":
@@ -191,3 +204,55 @@ def _copy_metric_if_exists(output_root: str | Path, source_name: str, destinatio
     destination = Path(output_root) / "metrics" / destination_name
     if source.exists():
         destination.write_text(source.read_text(encoding="utf-8"), encoding="utf-8")
+
+
+def _load_existing_phase_checkpoint(
+    model: torch.nn.Module,
+    checkpoint_paths: Sequence[Path],
+    device: torch.device,
+    logger: logging.Logger,
+    args,
+    phase_label: str,
+    required_epochs: int | None = None,
+) -> bool:
+    if bool(getattr(args, "force_rerun", False)):
+        return False
+    for checkpoint_path in checkpoint_paths:
+        if checkpoint_path.exists():
+            if required_epochs is not None:
+                metadata = load_checkpoint_metadata(checkpoint_path, map_location="cpu")
+                completed_epoch = _completed_checkpoint_epoch(metadata)
+                if completed_epoch < int(required_epochs):
+                    logger.info(
+                        "Found partial %s checkpoint at %s (%s/%s epochs); the phase trainer will resume it.",
+                        phase_label,
+                        checkpoint_path,
+                        completed_epoch,
+                        required_epochs,
+                    )
+                    return False
+            metadata = load_checkpoint(checkpoint_path, model, map_location=device)
+            logger.info("Loaded existing %s checkpoint: %s metadata=%s", phase_label, checkpoint_path, metadata)
+            if device.type == "cuda":
+                torch.cuda.empty_cache()
+            return True
+    return False
+
+
+def _checkpoint_phase_matches(checkpoint_path: Path, allowed_phases: set[str]) -> bool:
+    if not checkpoint_path.exists():
+        return False
+    metadata = load_checkpoint_metadata(checkpoint_path, map_location="cpu")
+    return str(metadata.get("phase", "")) in allowed_phases
+
+
+def _completed_checkpoint_epoch(metadata: dict) -> int:
+    for key in ("epoch", "epochs"):
+        value = metadata.get(key)
+        if value is None or value == "":
+            continue
+        try:
+            return int(value)
+        except (TypeError, ValueError):
+            continue
+    return 0

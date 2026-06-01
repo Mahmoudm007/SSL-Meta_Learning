@@ -19,14 +19,17 @@ from src.models.projection_heads import ProjectionHead
 
 
 CONVNEXT_FALLBACK = "convnext_base"
+CONVNEXT_ALIASES = {
+    "convnext_base_in22k": "convnext_base.fb_in22k",
+}
 
 
 class ConvNeXtRSCModel(nn.Module):
-    def __init__(self, model_name: str = "convnext_base_in22k", num_classes: int = 5, projection_dim: int = 128, logger: logging.Logger | None = None) -> None:
+    def __init__(self, model_name: str = "convnext_base.fb_in22k", num_classes: int = 5, projection_dim: int = 128, logger: logging.Logger | None = None) -> None:
         super().__init__()
         if timm is None:
             raise ImportError(f"timm is required for ConvNeXt models: {_TIMM_IMPORT_ERROR}")
-        selected_name = model_name
+        selected_name = CONVNEXT_ALIASES.get(model_name, model_name)
         try:
             self.encoder = timm.create_model(selected_name, pretrained=False, num_classes=0, global_pool="avg")
         except Exception as exc:

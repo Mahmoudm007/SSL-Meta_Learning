@@ -48,7 +48,7 @@ def train_maml_anil(
         pre_recalls = []
         post_recalls = []
         inner_loss_steps: List[List[float]] = [[] for _ in range(max(args.inner_steps, 1))]
-        for _ in tqdm(range(episodes_per_epoch), desc=f"{algorithm.upper()} epoch {epoch}/{epochs}", leave=False):
+        for _ in tqdm(range(episodes_per_epoch), desc=f"{algorithm.upper()} epoch {epoch}/{epochs}", leave=False, ascii=True):
             episode = sampler.sample()
             result = _adapt_episode(model, train_dataset, episode, class_mapping, args, device)
             outer_losses.append(result["post_loss"])

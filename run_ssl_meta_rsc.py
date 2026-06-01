@@ -2,8 +2,12 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 from pathlib import Path
 from typing import List
+
+os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
+os.environ.setdefault("PYTORCH_CUDA_ALLOC_CONF", "expandable_segments:True")
 
 import torch
 
@@ -22,6 +26,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--experiment", choices=EXPERIMENT_KEYS, default=None)
     parser.add_argument("--support_per_class", type=int, default=60)
     parser.add_argument("--query_per_class", type=int, default=60)
+    parser.add_argument("--episode_batch_size", type=int, default=0, help="Feature microbatch size inside prototypical episodes; 0 uses --batch_size")
     parser.add_argument("--warmup_dir", default="Warm-up Dataset")
     parser.add_argument("--data_dir", default="Dataset_classes/1 Defined")
     parser.add_argument("--output_dir", default="Output")
@@ -41,7 +46,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--resume", default=None)
     parser.add_argument("--skip_ssl_if_checkpoint_exists", type=str2bool, nargs="?", const=True, default=True)
     parser.add_argument("--force_rerun", action="store_true")
-    parser.add_argument("--convnext_name", default="convnext_base_in22k", choices=["convnext_tiny", "convnext_small", "convnext_base", "convnext_base_in22k", "convnext_large"])
+    parser.add_argument(
+        "--convnext_name",
+        default="convnext_base.fb_in22k",
+        choices=["convnext_tiny", "convnext_small", "convnext_base", "convnext_base_in22k", "convnext_base.fb_in22k", "convnext_large"],
+    )
     parser.add_argument("--dino_name", default="vit_base_patch14_dinov2.lvd142m")
     parser.add_argument("--loss", default="weighted_ce", choices=["ce", "weighted_ce", "focal"])
     parser.add_argument("--sampler", default="balanced", choices=["standard", "balanced"])

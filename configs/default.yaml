@@ -8,6 +8,7 @@ defaults:
   query_per_class: 60
   image_size: 512
   batch_size: 32
+  episode_batch_size: 0
   seed: 42
   augmentation_strength: medium
   skip_ssl_if_checkpoint_exists: true

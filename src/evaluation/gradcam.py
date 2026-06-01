@@ -39,7 +39,7 @@ def generate_interpretability_outputs(
         return
     rows = predictions if max_images in (None, 0) else predictions.head(max_images)
     metadata_rows = []
-    for row_index, row in tqdm(rows.iterrows(), total=len(rows), desc=f"{model_key} visualizations", leave=False):
+    for row_index, row in tqdm(rows.iterrows(), total=len(rows), desc=f"{model_key} visualizations", leave=False, ascii=True):
         image_path = Path(row["image_path"])
         if not image_path.exists():
             logger.error("Grad-CAM image path is missing: %s", image_path)

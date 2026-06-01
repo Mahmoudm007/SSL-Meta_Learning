@@ -20,17 +20,18 @@ set -euo pipefail
 mkdir -p Output outputs errors
 
 EXPERIMENT_NAME="${EXPERIMENT_NAME:-SSL_Hybrid_FineTune_Episodic}"
-RUN_ID="${RUN_ID:-${EXPERIMENT_NAME}_${SLURM_JOB_ID:-manual_$(date +%Y%m%d_%H%M%S)}}"
+RUN_ID="${RUN_ID:-SSL_Hybrid_FineTune_Episodic_7549}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-Output/$RUN_ID}"
 WARMUP_DIR="${WARMUP_DIR:-Warm-up Dataset}"
 DATA_DIR="${DATA_DIR:-Dataset_classes/1 Defined}"
 MODELS="${MODELS:-convnext dino}"
-CONVNEXT_NAME="${CONVNEXT_NAME:-convnext_base_in22k}"
+CONVNEXT_NAME="${CONVNEXT_NAME:-convnext_base.fb_in22k}"
 DINO_NAME="${DINO_NAME:-vit_base_patch14_dinov2.lvd142m}"
 IMAGE_SIZE="${IMAGE_SIZE:-512}"
 BATCH_SIZE="${BATCH_SIZE:-32}"
 SUPPORT_PER_CLASS="${SUPPORT_PER_CLASS:-80}"
 QUERY_PER_CLASS="${QUERY_PER_CLASS:-80}"
+EPISODE_BATCH_SIZE="${EPISODE_BATCH_SIZE:-$BATCH_SIZE}"
 NUM_WORKERS="${NUM_WORKERS:-4}"
 DEVICE="${DEVICE:-cuda}"
 EPOCHS_SSL="${EPOCHS_SSL:-100}"
@@ -61,6 +62,7 @@ emit_job_metadata() {
     echo "Batch size:         $BATCH_SIZE"
     echo "Support per class:  $SUPPORT_PER_CLASS"
     echo "Query per class:    $QUERY_PER_CLASS"
+    echo "Episode batch size: $EPISODE_BATCH_SIZE"
     echo "Num workers:        $NUM_WORKERS"
     echo "Device:             $DEVICE"
     echo "SSL epochs:         $EPOCHS_SSL"
@@ -76,12 +78,36 @@ emit_job_metadata() {
     echo "========================================================================"
 }
 
+emit_checkpoint_inventory() {
+    echo "========================================================================"
+    echo "Checkpoint inventory before training"
+    echo "========================================================================"
+    for model in $MODELS; do
+        checkpoint_dir="$OUTPUT_ROOT/$EXPERIMENT_NAME/$model/checkpoints"
+        echo "Model: $model"
+        echo "Checkpoint dir: $checkpoint_dir"
+        if [[ ! -d "$checkpoint_dir" ]]; then
+            echo "  MISSING directory"
+            continue
+        fi
+        for checkpoint in ssl_encoder.pt supervised_finetuned.pt episodic_balanced.pt hard_prototypical.pt episodic_hard_final.pt best_model.pt final_model.pt; do
+            checkpoint_path="$checkpoint_dir/$checkpoint"
+            if [[ -f "$checkpoint_path" ]]; then
+                echo "  FOUND   $checkpoint"
+            else
+                echo "  MISSING $checkpoint"
+            fi
+        done
+    done
+    echo "========================================================================"
+}
+
 # Print metadata at the top of both SLURM .out and .err files.
 emit_job_metadata
 emit_job_metadata >&2
 
 if command -v module >/dev/null 2>&1; then
-    module reset
+    module reset >/dev/null 2>&1
     module load StdEnv/2023
     module load gcc/12.3
     module load python/3.10
@@ -108,6 +134,9 @@ export MKL_NUM_THREADS=1
 export NUMEXPR_NUM_THREADS=1
 export PYTHONUNBUFFERED=1
 export PYTHONFAULTHANDLER=1
+export PYTORCH_CUDA_ALLOC_CONF="${PYTORCH_CUDA_ALLOC_CONF:-expandable_segments:True}"
+export CUBLAS_WORKSPACE_CONFIG="${CUBLAS_WORKSPACE_CONFIG:-:4096:8}"
+export PYTHONIOENCODING="${PYTHONIOENCODING:-utf-8}"
 
 # ---------------------------------------------------------------------------
 # Pretrained / cache paths for offline clusters
@@ -140,12 +169,14 @@ echo "Image size:        $IMAGE_SIZE"
 echo "Batch size:        $BATCH_SIZE"
 echo "Support per class: $SUPPORT_PER_CLASS"
 echo "Query per class:   $QUERY_PER_CLASS"
+echo "Episode batch size: $EPISODE_BATCH_SIZE"
 echo "Num workers:       $NUM_WORKERS"
 echo "Device:            $DEVICE"
 echo "SSL epochs:        $EPOCHS_SSL"
 echo "Fine-tune epochs:  $EPOCHS_FINETUNE"
 echo "Meta epochs:       $EPOCHS_META"
 echo "Episodes/epoch:    $EPISODES_PER_EPOCH"
+emit_checkpoint_inventory
 nvidia-smi -L || true
 python - <<'PY'
 import sys
@@ -166,7 +197,7 @@ echo ""
 # This runs the recommended best-overall setting:
 #   - selected experiment: SSL_Hybrid_FineTune_Episodic
 #   - models: convnext dino
-#   - ConvNeXt: convnext_base_in22k
+#   - ConvNeXt: convnext_base.fb_in22k
 #   - image size: 512
 #   - batch size: 32
 #   - support/query per class: 80/80
@@ -189,6 +220,7 @@ python run_ssl_meta_rsc.py \
     --batch_size "$BATCH_SIZE" \
     --support_per_class "$SUPPORT_PER_CLASS" \
     --query_per_class "$QUERY_PER_CLASS" \
+    --episode_batch_size "$EPISODE_BATCH_SIZE" \
     --num_workers "$NUM_WORKERS" \
     --device "$DEVICE" \
     --loss weighted_ce \

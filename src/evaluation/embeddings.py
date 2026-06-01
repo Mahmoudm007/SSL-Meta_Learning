@@ -27,7 +27,7 @@ def extract_embeddings(model: torch.nn.Module, dataset, device: torch.device, ba
     labels = []
     paths: list[str] = []
     with torch.no_grad():
-        for images, batch_labels, batch_paths, _ in tqdm(loader, desc="Extract embeddings", leave=False):
+        for images, batch_labels, batch_paths, _ in tqdm(loader, desc="Extract embeddings", leave=False, ascii=True):
             images = images.to(device)
             features = model.forward_features(images)
             embeddings.append(features.detach().cpu().numpy())

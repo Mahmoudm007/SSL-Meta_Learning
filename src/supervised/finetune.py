@@ -55,7 +55,7 @@ def train_supervised_classifier(
         model.train()
         losses = []
         gradient_norms = []
-        progress = tqdm(train_loader, desc=f"{phase_name} epoch {epoch}/{epochs}", leave=False)
+        progress = tqdm(train_loader, desc=f"{phase_name} epoch {epoch}/{epochs}", leave=False, ascii=True)
         for images, labels_tensor, _, _ in progress:
             images = images.to(device, non_blocking=True)
             labels_tensor = labels_tensor.to(device, non_blocking=True)

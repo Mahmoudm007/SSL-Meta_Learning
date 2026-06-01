@@ -76,7 +76,7 @@ The full method follows five steps:
 
 Both models run sequentially by default:
 
-- **ConvNeXt** via `timm`, default `convnext_base_in22k`; supports `convnext_tiny`, `convnext_small`, `convnext_base`, `convnext_base_in22k`, `convnext_large`.
+- **ConvNeXt** via `timm`, default `convnext_base.fb_in22k`; supports `convnext_tiny`, `convnext_small`, `convnext_base`, `convnext_base_in22k`, `convnext_base.fb_in22k`, `convnext_large`.
 - **DINO / DINOv2-style ViT** via `timm`, default `vit_base_patch14_dinov2.lvd142m`.
 
 If the requested ConvNeXt or DINO model is unavailable in the local `timm` version, the code logs the issue and falls back to `convnext_base` or `vit_base_patch16_224`, respectively.
@@ -91,7 +91,7 @@ The first experiment is:
 
 Key: `SSL_Prototypical`
 
-Purpose: test whether SSL-pretrained winter-road embeddings support balanced 5-way K-shot classification. The code saves prototype vectors, prototype distance matrices, support/query indices, query metrics, and query predictions. Defaults are `support_per_class=60`, `query_per_class=60`, and Euclidean prototype distance.
+Purpose: test whether SSL-pretrained winter-road embeddings support balanced 5-way K-shot classification. The code saves prototype vectors, prototype distance matrices, support/query indices, query metrics, and query predictions. Defaults are `support_per_class=60`, `query_per_class=60`, and Euclidean prototype distance. Episodic feature extraction uses `--episode_batch_size` as a microbatch, so large logical episodes do not have to fit through the backbone in one CUDA allocation.
 
 ### E2: SSL + Hard Prototypical Episodes
 
@@ -311,6 +311,12 @@ Change support/query samples:
 python run_ssl_meta_rsc.py --experiment SSL_Prototypical --support_per_class 20 --query_per_class 20
 ```
 
+Keep large episodes but lower episodic GPU memory:
+
+```bash
+python run_ssl_meta_rsc.py --experiment SSL_Hybrid_FineTune_Episodic --support_per_class 80 --query_per_class 80 --episode_batch_size 16
+```
+
 Run with default support/query explicitly:
 
 ```bash
@@ -414,6 +420,8 @@ The code sets Python, NumPy, and PyTorch seeds and enables deterministic PyTorch
 
 - If a folder is missing, the runner stops before training and prints the exact missing path.
 - If CUDA is requested but unavailable, the runner falls back to CPU and logs the change.
+- If a hybrid run stops after a completed phase, rerun with the same `--output_dir` and without `--force_rerun`; existing phase checkpoints are loaded and completed phases are skipped.
+- If episodic training runs out of CUDA memory, reduce `--episode_batch_size`; it defaults to `--batch_size`.
 - If the selected ConvNeXt/DINO model is unavailable, the runner falls back to `convnext_base` / `vit_base_patch16_224`.
 - If Grad-CAM cannot be applied to a selected transformer, the visualization is labeled as saliency rather than Grad-CAM.
 - Defaults use one epoch per phase so commands are executable immediately. Increase `--epochs_ssl`, `--epochs_finetune`, `--epochs_meta`, and `--episodes_per_epoch` for full research runs.
