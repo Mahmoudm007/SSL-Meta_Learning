@@ -4,7 +4,7 @@
 # Run locally with: bash run_all_models.sh
 #SBATCH --job-name=RSC_SSL_META_Hybrid_HardEpisodic
 #SBATCH --partition=gpu-h200
-#SBATCH --gres=gpu:4
+#SBATCH --gres=gpu:8
 #SBATCH --qos=normal
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
